@@ -66,14 +66,20 @@ async function pane(store: UnsentPromptStore, answer: (text: string) => Error | 
     }
   }
   let rows: Row[] = [];
+  let socket: Relay | undefined;
   const client = await AcpmuxDirectClient.connect(
     mockHost,
     (snapshot) => (rows = snapshot.rows as Row[]),
     undefined,
-    () => new Relay() as unknown as WebSocket,
+    () => (socket = new Relay()) as unknown as WebSocket,
   );
   client.setUnsentPromptStore(store);
-  return { client, rows: () => rows };
+  /// The connection goes while a request waits (`rejectPending`), as an acpmux restart drops it.
+  const drop = () => {
+    socket!.close();
+    (socket as unknown as { onclose: (() => void) | null }).onclose?.();
+  };
+  return { client, rows: () => rows, drop };
 }
 
 /// Lets the pane's queued work run: the host store answers at once, so the restore and the store
@@ -172,13 +178,15 @@ test("a prompt that went through is never kept", async () => {
 
 test("a prompt lost with its connection stays kept for a relaunch, and comes back as a quiet Not sent row", async () => {
   const host = hostStore();
-  const lost = await pane(host.store, () =>
-    Object.assign(new Error("closed"), { code: "native.timed_out", interrupted: true }),
-  );
-  const error = await lost.client.send("lost one").then(
+  const lost = await pane(host.store, () => "hang");
+  const sending = lost.client.send("lost one").then(
     () => undefined,
     (e: unknown) => e,
   );
+  await settle();
+  lost.drop();
+  const error = await sending;
+  expect((error as { lostPrompt?: unknown }).lostPrompt).toBeDefined();
   // Its sender waits for the next connection (lostPrompt.ts keepLostPrompt), as #41513 made it:
   // no failed row to keep in the chat from here, and the host's copy stays meanwhile.
   expect((error as { failedRow?: unknown }).failedRow).toBeUndefined();
