@@ -149,7 +149,7 @@ final class TitlebarToolbarBand: NSView {
         sidebarToggle.symbol = SidebarToggleIcon.slideSymbol(progress: glyphProgress)
     }
 
-    private let ink = GlyphInk()
+    private let ink = GlyphInkMeasure()
     /// The buttons' slots: one ink gap between glyphs (`TopRowSpacing`); each item and gap is `presence` of it.
     var slots: TopRowSpacing.Slots { ink.slots(for: [sidebarToggle, backButton, forwardButton].map(\.image), gap: TopRowSpacing.glyphGap) }
     override func layout() {

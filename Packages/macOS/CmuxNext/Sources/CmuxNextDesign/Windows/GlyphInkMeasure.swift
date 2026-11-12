@@ -4,7 +4,7 @@ public import AppKit
 /// what the eye sees rather than by their images' padding (``TopRowSpacing``). Results are cached
 /// per image instance: the band measures again only when a density or icon change draws a new image.
 @MainActor
-public final class GlyphInk {
+public final class GlyphInkMeasure {
     private var cache: [ObjectIdentifier: (image: NSImage, glyph: TopRowSpacing.Glyph)] = [:]
 
     public init() {}
@@ -47,7 +47,7 @@ public final class GlyphInk {
     }
 }
 
-extension GlyphInk {
+extension GlyphInkMeasure {
     /// The top-row band's buttons laid out from their images' ink, `gap` apart (``TopRowSpacing/slots(side:gap:glyphs:)``).
     /// - Parameter images: Each button's image, in band order (nil: an empty glyph).
     /// - Parameter gap: The ink gap between consecutive glyphs.

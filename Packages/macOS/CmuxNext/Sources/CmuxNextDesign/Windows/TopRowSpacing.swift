@@ -26,7 +26,7 @@ public struct TopRowSpacing {
     /// button gap plus two margins of an arrow (``glyphExtent``) in its button.
     public static var glyphGap: CGFloat { groupGap + max(0, buttonSide - glyphExtent) }
 
-    /// Where one glyph's ink sits in its image (``GlyphInk``).
+    /// Where one glyph's ink sits in its image (``GlyphInkMeasure``).
     public struct Glyph: Equatable, Sendable {
         /// The image's width.
         public var imageWidth: CGFloat
