@@ -196,6 +196,12 @@ fn clients_asking_for_the_whole_list_over_and_over_cost_the_daemon_a_few_percent
     let daemon = start(&dir, &home);
     assert_eq!(list_once(&daemon.1).len(), CHATS);
     std::thread::sleep(Duration::from_secs(5));
+    {
+        let (t0, c0) = (Instant::now(), cpu(daemon.0.id()));
+        std::thread::sleep(WINDOW);
+        let idle = (cpu(daemon.0.id()) - c0).as_secs_f64() / t0.elapsed().as_secs_f64();
+        eprintln!("PROBE idle: share={idle:.5}");
+    }
 
     let reconnect: fn(&Path, &mut Option<Rpc>) =
         |socket, _| assert_eq!(list_once(socket).len(), CHATS);
@@ -213,6 +219,7 @@ fn clients_asking_for_the_whole_list_over_and_over_cost_the_daemon_a_few_percent
         ("reconnect as fast as it reads", 1, true, reconnect),
     ] {
         let (share, lists) = measured(&daemon, clients, fast, ask);
+        eprintln!("PROBE phase {name}: share={share:.5} lists={lists}");
         report.push((
             name,
             share,
@@ -267,7 +274,11 @@ fn clients_asking_for_the_whole_list_over_and_over_cost_the_daemon_a_few_percent
                 if v["id"] != watcher.2 {
                     continue;
                 }
-                let rows = v["result"]["sessions"].as_array().unwrap();
+                let Some(rows) = v["result"]["sessions"].as_array() else {
+                    let text = v.to_string();
+                    eprintln!("PROBE race reply without sessions: {}", &text[..text.len().min(4000)]);
+                    panic!("PROBE race reply without sessions");
+                };
                 if let Some(row) = rows.iter().find(|s| s["sessionId"] == id(9).as_str()) {
                     let listed = row["name"].as_str().unwrap();
                     assert!(listed >= told.as_str(), "listed {listed} after a notice of {told}");
